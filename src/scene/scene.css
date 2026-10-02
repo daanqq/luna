@@ -36,6 +36,9 @@
   color: var(--c-muted);
   text-shadow: 0 0 6px #000, 0 0 2px #000;
   pointer-events: none;
+  /* The entrance lives here, not on the bottom bar: the stage glitch takes over that bar's
+     `animation`, and handing it back would replay the entrance from the start. */
+  animation: scene-fade-in 1.6s steps(8, end) 1.6s both;
 }
 
 [data-page='home'] .scene-page a {
@@ -49,11 +52,22 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: end;
   gap: var(--space-2);
-  animation: scene-fade-in 1.6s steps(8, end) 1.6s both;
 }
 
 [data-page='home'] .scene-links {
   justify-self: end;
+}
+
+/* Time travel fades the overlay through `--scene-ui` (era-ui.ts); the bottom bar's own animations stay on top. */
+[data-page='home'] .scene-who,
+[data-page='home'] .scene-switch,
+[data-page='home'] .scene-links {
+  opacity: var(--scene-ui, 1);
+}
+
+[data-page='home'][data-ui-gone] .scene-page a,
+[data-page='home'][data-ui-gone] .scene-era {
+  pointer-events: none;
 }
 
 /* Handle above, then first and last name, then the role. */
@@ -392,7 +406,7 @@
 /* Still frame: no entrance animations. */
 @media (prefers-reduced-motion: reduce) {
   [data-page='home'] .scene-stage,
-  [data-page='home'] .scene-bottom,
+  [data-page='home'] .scene-page,
   [data-page='home'][data-glitch] .scene-bottom {
     animation: none;
   }

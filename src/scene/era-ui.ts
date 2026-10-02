@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../lib/reduced-motion';
+import { onTick } from '../lib/ticker';
 import { FONT_STAGE, LAST_STAGE } from './era';
 import type { SceneApi } from './scene';
 
@@ -6,6 +8,8 @@ const INTRO_KEY = 'scene-intro-seen';
 /** How long the 2026 shaders took last time on this device; drives the estimated progress bar. */
 const COMPILE_KEY = 'scene-compile-ms';
 const BAR_CELLS = 12;
+/** The first-visit trip starts no earlier than this after the page opened, so 2001 gets a moment on screen. */
+const INTRO_DELAY_MS = 10_000;
 
 function introSeen(): boolean {
   try {
@@ -39,6 +43,84 @@ function markIntroSeen(): void {
   }
 }
 
+/** How far the overlay drops on the n-th stage change of a trip (n = 1..LAST_STAGE - 1), and how far it recovers. */
+const dipAt = (n: number): number => 0.8 - 0.15 * n;
+const ceilingAt = (n: number): number => 1 - 0.11 * n;
+/** Recovery time constant, and how long the overlay stays gone after arriving at either end. */
+const RECOVER_SECONDS = 0.35;
+const ARRIVAL_HOLD_MS = 3000;
+
+/**
+ * Overlay opacity during time travel. A trip runs from where the scene stood to where it stops, in one
+ * direction; its n-th stage change drops the overlay at once and lets it creep back toward a ceiling,
+ * both lower with every change, so a one-stage trip dips once and a three-stage trip three times, the
+ * same both ways. A full trip end to end makes LAST_STAGE changes: its last one hides the overlay for a
+ * few seconds before it fades back in. When the trip stops the overlay returns in full. The level is a
+ * CSS variable on <body>, so the entrance and glitch animations still apply on top.
+ */
+function createOverlayFade(body: HTMLElement) {
+  let level = 1;
+  let goal = 1;
+  let holdUntil = 0;
+  /** Stage changes so far in the current trip, and its direction (0 while standing). */
+  let steps = 0;
+  let direction = 0;
+  let unsubscribe: (() => void) | null = null;
+
+  const apply = (): void => {
+    body.style.setProperty('--scene-ui', level.toFixed(3));
+    // An invisible link or slider must not catch a stray click.
+    body.toggleAttribute('data-ui-gone', level < 0.05);
+  };
+  const tick = (time: number, delta: number): void => {
+    if (time < holdUntil) level = 0;
+    else level += (goal - level) * (1 - Math.exp(-delta / 1000 / RECOVER_SECONDS));
+    if (time >= holdUntil && Math.abs(goal - level) < 0.002) {
+      level = goal;
+      unsubscribe?.();
+      unsubscribe = null;
+    }
+    apply();
+  };
+  const run = (): void => {
+    apply();
+    unsubscribe ??= onTick(tick);
+  };
+
+  return {
+    /** The scene moved one stage up (dir 1) or down (dir -1); turning back starts a new trip. */
+    step(dir: 1 | -1): void {
+      if (dir !== direction) steps = 0;
+      direction = dir;
+      const n = ++steps;
+      if (n >= LAST_STAGE) {
+        level = 0;
+        goal = 1;
+        holdUntil = performance.now() + ARRIVAL_HOLD_MS;
+      } else {
+        holdUntil = 0;
+        level = Math.min(level, dipAt(n));
+        goal = ceilingAt(n);
+      }
+      run();
+    },
+    /** The trip is over; after a full trip the overlay still sits out its hold. */
+    settle(): void {
+      steps = 0;
+      direction = 0;
+      if (level === 1 && goal === 1) return;
+      goal = 1;
+      run();
+    },
+    destroy(): void {
+      unsubscribe?.();
+      unsubscribe = null;
+      body.style.removeProperty('--scene-ui');
+      body.removeAttribute('data-ui-gone');
+    },
+  };
+}
+
 /** Screen reader value of a stage: the end years, or the step between them. */
 function stageText(stage: number): string {
   if (stage === 0) return '2001';
@@ -49,7 +131,8 @@ function stageText(stage: number): string {
 /**
  * Wires the `2001 [-------] 2026` scale to the scene: the slider picks any stage, the end years
  * make the full trip. While the 2026 shaders compile a loader stands in its place. On the first
- * visit the scene then travels to 2026 by itself and the scale appears once it has arrived; later
+ * visit the scene then travels to 2026 by itself, 10 s after opening at the earliest (or when the
+ * compile is done, if later), and the scale appears once it has arrived; later
  * visits get it as soon as 2026 is ready. `body[data-era]` swaps the overlay typeface;
  * `data-glitch` restarts a stepped glitch each time the era stage changes.
  */
@@ -65,6 +148,10 @@ export function bindEraUi(api: SceneApi): () => void {
   if (loader) loader.hidden = false;
   let intro = false;
   let unbound = false;
+  let introTimer = 0;
+  // With reduced motion the stages are jumped over, so the overlay just stays.
+  const fade = prefersReducedMotion() ? null : createOverlayFade(body);
+  let shownStage: number | null = null;
 
   // Drivers report no compile progress, so the bar is an estimate: an ease toward the time the
   // compile took last time, never below the share of finished programs, full only when ready.
@@ -96,9 +183,12 @@ export function bindEraUi(api: SceneApi): () => void {
     storeCompileMs(performance.now() - started);
     // `?era=` pins the scene for review, so it never plays the intro.
     if (!introSeen() && !new URLSearchParams(window.location.search).has('era')) {
-      markIntroSeen();
-      intro = true;
-      api.setStage(LAST_STAGE);
+      // A fast compile would start the trip at once; the clock counts from the navigation start.
+      introTimer = window.setTimeout(() => {
+        markIntroSeen();
+        intro = true;
+        api.setStage(LAST_STAGE);
+      }, Math.max(0, INTRO_DELAY_MS - performance.now()));
     } else {
       control.hidden = false;
     }
@@ -106,6 +196,9 @@ export function bindEraUi(api: SceneApi): () => void {
 
   const stop = api.onEra((state) => {
     const era = state.stage >= FONT_STAGE ? '2026' : '1997';
+    if (shownStage !== null && state.stage !== shownStage) fade?.step(state.stage > shownStage ? 1 : -1);
+    if (state.settled) fade?.settle();
+    shownStage = state.stage;
     range.value = String(state.target);
     range.setAttribute('aria-valuetext', stageText(state.target));
     // Ticks fill up to the stage on screen; the thumb already shows where the trip ends.
@@ -129,6 +222,8 @@ export function bindEraUi(api: SceneApi): () => void {
   return () => {
     unbound = true;
     cancelAnimationFrame(frame);
+    clearTimeout(introTimer);
+    fade?.destroy();
     stop();
     range.removeEventListener('input', onInput);
     for (const end of ends) end.removeEventListener('click', onEnd);
