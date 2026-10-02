@@ -29,7 +29,7 @@ export interface EraLook {
   /** Quantisation steps of glyph alpha; 0 is continuous. */
   alphaLevels: number;
   /** Which glyph atlas is used. */
-  geist: boolean;
+  modern: boolean;
   scan: number;
   grain: number;
   vignette: number;
@@ -44,19 +44,19 @@ export interface EraLook {
 }
 
 export const LAST_STAGE = 6;
-/** Stage at which glyphs and overlay switch to Geist Mono: when colour arrives. */
+/** Stage at which glyphs and overlay switch to Space Mono: when colour arrives. */
 export const FONT_STAGE = 4;
 const TRAVEL_SECONDS = 2.8;
 const FLICKER_SECONDS = 0.3;
 
 const STAGES: readonly EraLook[] = [
-  { pixelShare: 1, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, geist: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 1, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, geist: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 1, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, geist: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 0.8, mode: 2, mix: 1, levels: 24, dither: 0.8, alphaLevels: 14, geist: false, scan: 0.08, grain: 0, vignette: 0.1, flicker: 0.5, aurora: 0.5, glyph: 0.5, reveal: false },
-  { pixelShare: 0.5, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, geist: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true },
-  { pixelShare: 0.34, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, geist: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true },
-  { pixelShare: 0, mode: 3, mix: 1, levels: 0, dither: 0, alphaLevels: 0, geist: true, scan: 0, grain: 0.03, vignette: 0.4, flicker: 0.6, aurora: 1, glyph: 0, reveal: true },
+  { pixelShare: 1, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
+  { pixelShare: 1, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
+  { pixelShare: 1, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false },
+  { pixelShare: 0.8, mode: 2, mix: 1, levels: 24, dither: 0.8, alphaLevels: 14, modern: false, scan: 0.08, grain: 0, vignette: 0.1, flicker: 0.5, aurora: 0.5, glyph: 0.5, reveal: false },
+  { pixelShare: 0.5, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, modern: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true },
+  { pixelShare: 0.34, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, modern: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true },
+  { pixelShare: 0, mode: 3, mix: 1, levels: 0, dither: 0, alphaLevels: 0, modern: true, scan: 0, grain: 0.03, vignette: 0.4, flicker: 0.6, aurora: 1, glyph: 0, reveal: true },
 ];
 
 export function lookAt(stage: number): EraLook {

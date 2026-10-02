@@ -1,9 +1,9 @@
 import { createTexture } from './gl';
 
 /**
- * Glyph atlases for the curtain: Departure Mono for the AGC listing (1997 look) and Geist Mono
+ * Glyph atlases for the curtain: Departure Mono for the AGC listing (1997 look) and Space Mono
  * for the site's own code (2026). Each text has its own grid, and its slots index its own atlas.
- * Row 0 is the glyph mask, row 1 (Geist only) is a blurred copy used as glow.
+ * Row 0 is the glyph mask, row 1 (Space Mono only) is a blurred copy used as glow.
  */
 export interface Atlas {
   texture: WebGLTexture;

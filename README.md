@@ -54,4 +54,4 @@ src/
 
 - Moon: NASA SVS 4720 "CGI Moon Kit", LRO colour map (public domain).
 - 2001 text curtain: Apollo 11 guidance computer source, MIT Instrumentation Laboratory, 1969, via [chrislgarry/Apollo-11](https://github.com/chrislgarry/Apollo-11) (public domain).
-- Fonts: [Departure Mono](https://departuremono.com), see `public/fonts/DepartureMono-LICENSE.txt`; [Geist Mono](https://vercel.com/font) (SIL Open Font License 1.1, bundled from `@fontsource/geist-mono`), see `public/fonts/GeistMono-LICENSE.txt`.
+- Fonts: [Departure Mono](https://departuremono.com), see `public/fonts/DepartureMono-LICENSE.txt`; [Space Mono](https://github.com/googlefonts/spacemono) (SIL Open Font License 1.1, bundled from `@fontsource/space-mono`), see `public/fonts/SpaceMono-LICENSE.txt`.

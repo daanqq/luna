@@ -41,7 +41,7 @@ export interface SceneApi {
 }
 
 const FONT_DEPARTURE = '"Departure Mono", ui-monospace, monospace';
-const FONT_GEIST = '"Geist Mono", ui-monospace, monospace';
+const FONT_MODERN = '"Space Mono", ui-monospace, monospace';
 const FONT_SIZE = 11;
 const LINE_HEIGHT = 13;
 const HORIZON = 0.66;
@@ -113,19 +113,19 @@ interface Layout {
   rows: number;
   cellWidth: number;
   field: CurtainField;
-  /** Glyph slots per text: agc (Departure atlas, 1997) and site code (Geist atlas, 2026). */
+  /** Glyph slots per text: agc (Departure atlas, 1997) and site code (Space Mono atlas, 2026). */
   agc: GlyphGrid;
   code: GlyphGrid;
   instances: Float32Array;
   columns: Float32Array;
   departure: Atlas;
-  geist: Atlas | null;
+  modern: Atlas | null;
   reflection: Target;
   /** Coarse light maps the scene samples instead of tracing the aurora and the reflected sky per pixel. */
   auroraMap: Target;
   skyMap: Target;
   rayFrequency: number;
-  geistRatio: number;
+  modernRatio: number;
   /** Static per-cell height profile of the curtain (0 where it never shows) and per-column arch gain. */
   profile: Float64Array;
   archGains: Float64Array;
@@ -271,7 +271,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
   let layout: Layout | null = null;
   let sceneTarget: Target | null = null;
   let sceneNearest = false;
-  let geistReady = false;
+  let modernReady = false;
   let visible = true;
   let destroyed = false;
   let unsubscribe: (() => void) | null = null;
@@ -308,7 +308,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
     return clamp(Math.ceil(Math.sqrt((width * height) / 90000)), 3, MAX_BASE_PIXEL);
   }
 
-  function makeAtlases(grids: { agc: GlyphGrid; code: GlyphGrid }, cellWidth: number, dpr: number): { departure: Atlas; geist: Atlas | null; geistRatio: number } {
+  function makeAtlases(grids: { agc: GlyphGrid; code: GlyphGrid }, cellWidth: number, dpr: number): { departure: Atlas; modern: Atlas | null; modernRatio: number } {
     const departure = buildAtlas(gl!, grids.agc.chars, {
       family: FONT_DEPARTURE,
       size: FONT_SIZE,
@@ -320,15 +320,15 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       crisp: true,
       baseline: 0.74,
     });
-    const geistRatio = advanceRatio(FONT_GEIST);
-    let geist: Atlas | null = null;
-    if (geistReady) {
+    const modernRatio = advanceRatio(FONT_MODERN);
+    let modern: Atlas | null = null;
+    if (modernReady) {
       const scale = Math.min(3, Math.max(2, dpr * 1.5));
       // A wide code alphabet must still fit the texture width limit (4096 on many phones).
       const maxScale = (4000 / grids.code.chars.length - 8) / (cellWidth + 2);
-      geist = buildAtlas(gl!, grids.code.chars, {
-        family: FONT_GEIST,
-        size: cellWidth / geistRatio,
+      modern = buildAtlas(gl!, grids.code.chars, {
+        family: FONT_MODERN,
+        size: cellWidth / modernRatio,
         cellWidth,
         lineHeight: LINE_HEIGHT,
         scale: Math.min(scale, Math.max(1.5, maxScale)),
@@ -338,13 +338,13 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         baseline: 0.74,
       });
     }
-    return { departure, geist, geistRatio };
+    return { departure, modern, modernRatio };
   }
 
   function build(width: number, height: number): void {
     if (layout) {
       gl!.deleteTexture(layout.departure.texture);
-      if (layout.geist) gl!.deleteTexture(layout.geist.texture);
+      if (layout.modern) gl!.deleteTexture(layout.modern.texture);
       deleteTarget(gl!, layout.reflection);
       deleteTarget(gl!, layout.auroraMap);
       deleteTarget(gl!, layout.skyMap);
@@ -414,12 +414,12 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       instances: new Float32Array(instanceFloats),
       columns: new Float32Array(cols * 2),
       departure: atlases.departure,
-      geist: atlases.geist,
+      modern: atlases.modern,
       reflection,
       auroraMap,
       skyMap,
       rayFrequency: compact ? 2.4 : 1,
-      geistRatio: atlases.geistRatio,
+      modernRatio: atlases.modernRatio,
       profile,
       archGains,
       rays: new Float64Array(cols),
@@ -494,9 +494,9 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
   }
 
   /** Fills the instance buffer with one entry per visible glyph; returns their count. */
-  function writeGlyphs(l: Layout, look: EraLook, useGeist: boolean): number {
+  function writeGlyphs(l: Layout, look: EraLook, useModern: boolean): number {
     const { field, cols, rows, cellWidth, instances, width, rayFrequency, profile, archGains, rays } = l;
-    const { slots, accent } = useGeist ? l.code : l.agc;
+    const { slots, accent } = useModern ? l.code : l.agc;
     const { lineHeight, top, dx, dy, vx } = field;
     const radius = width < 900 ? 90 : 130;
     // Code leaves gaps between words, so it needs more light than justified prose to read as a sheet.
@@ -592,9 +592,9 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       if (fftLog && ++fftFrames % 30 === 0) console.info(`[scene] fft ${ocean.lastMs.toFixed(2)} ms (cpu + finish), mss ${ocean.binding.lost[0]!.toFixed(4)}`);
     }
     sampleColumns(l);
-    const useGeist = look.geist && l.geist !== null;
-    const atlas = useGeist && l.geist ? l.geist : l.departure;
-    const count = writeGlyphs(l, look, useGeist);
+    const useModern = look.modern && l.modern !== null;
+    const atlas = useModern && l.modern ? l.modern : l.departure;
+    const count = writeGlyphs(l, look, useModern);
 
     // Every pass rewrites its whole target (the additive ones after a clear or a composite), so
     // repeating them for `?gpuload` leaves the picture unchanged.
@@ -884,11 +884,11 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         if (options.reducedMotion) drawStill();
       })
       .catch(() => undefined);
-    void document.fonts.load(`${FONT_SIZE}px ${FONT_GEIST}`, SITE_CODE_LINES.join('\n').slice(0, 600)).then(() => {
+    void document.fonts.load(`${FONT_SIZE}px ${FONT_MODERN}`, SITE_CODE_LINES.join('\n').slice(0, 600)).then(() => {
       if (destroyed) return;
-      geistReady = true;
+      modernReady = true;
       if (layout) {
-        layout.geist = makeAtlases({ agc: layout.agc, code: layout.code }, layout.cellWidth, layout.dpr).geist;
+        layout.modern = makeAtlases({ agc: layout.agc, code: layout.code }, layout.cellWidth, layout.dpr).modern;
         if (options.reducedMotion) drawStill();
       }
     });
@@ -988,7 +988,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         deleteTarget(gl, layout.auroraMap);
         deleteTarget(gl, layout.skyMap);
         gl.deleteTexture(layout.departure.texture);
-        if (layout.geist) gl.deleteTexture(layout.geist.texture);
+        if (layout.modern) gl.deleteTexture(layout.modern.texture);
       }
     },
   };
