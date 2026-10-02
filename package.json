@@ -1,0 +1,36 @@
+{
+  "name": "luna",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check",
+    "lint": "oxlint src"
+  },
+  "dependencies": {
+    "@astrojs/react": "^7.0.0",
+    "@chenglou/pretext": "^0.0.9",
+    "@fontsource/geist-mono": "^5.3.0",
+    "astro": "^7.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "allowScripts": {
+    "esbuild": true
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "oxlint": "^1.86.0",
+    "typescript": "^6"
+  }
+}

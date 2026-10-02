@@ -1,0 +1,39 @@
+/*
+ * Design tokens shared by every page. Pages may override them inside
+ * their own root (`[data-page="..."]`), never here.
+ */
+:root {
+  color-scheme: dark;
+
+  /* AMOLED palette: true black, a few grays, one acid accent. */
+  --c-bg: #000;
+  --c-fg: #e6e6e6;
+  --c-muted: #8c8c8c;
+  --c-faint: #4a4a4a;
+  --c-line: #262626;
+  --c-accent: #b4ff39;
+
+  --font-mono: 'Departure Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Departure Mono renders pixel-perfect only at multiples of 11px. */
+  --text-1: 11px;
+  --text-2: 22px;
+  --text-3: 33px;
+  --text-4: 44px;
+  --text-6: 66px;
+  --text-8: 88px;
+
+  /* Vertical rhythm: one line of UI text. Spacing is counted in lines. */
+  --line: 22px;
+  --space-1: calc(var(--line) / 2);
+  --space-2: var(--line);
+  --space-3: calc(var(--line) * 2);
+  --space-4: calc(var(--line) * 4);
+
+  --border: 1px solid var(--c-line);
+
+  /* Stepped easing keeps motion frame-by-frame, like old hardware. */
+  --ease-step: steps(4, end);
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+}

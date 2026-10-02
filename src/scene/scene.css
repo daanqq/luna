@@ -1,0 +1,399 @@
+/* Full Moon, two eras (Center Stage + time travel): the canvas is the page, the content is a quiet overlay. */
+[data-page='home'] {
+  --c-muted: #7d7d7d;
+  --scene-gutter: var(--space-2);
+
+  overflow: hidden;
+  height: 100dvh;
+  background: var(--c-bg);
+  /* Dragging parts the curtain, so it must neither scroll nor select text. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+[data-page='home'] .scene-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  animation: scene-fade-in 3.2s steps(12, end) both;
+}
+
+[data-page='home'] .scene-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+[data-page='home'] .scene-page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100dvh;
+  padding: var(--scene-gutter);
+  text-transform: uppercase;
+  color: var(--c-muted);
+  text-shadow: 0 0 6px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+
+[data-page='home'] .scene-page a {
+  pointer-events: auto;
+}
+
+/* Bottom edge: who on the left, the era switch on the axis, links on the right. */
+[data-page='home'] .scene-bottom {
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: var(--space-2);
+  animation: scene-fade-in 1.6s steps(8, end) 1.6s both;
+}
+
+[data-page='home'] .scene-links {
+  justify-self: end;
+}
+
+/* Handle above, then first and last name, then the role. */
+[data-page='home'] .scene-name {
+  font-size: var(--text-6);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--c-fg);
+}
+
+[data-page='home'] .scene-name span {
+  display: block;
+}
+
+/* A handle is an identifier: keep its case. */
+[data-page='home'] .scene-handle {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-3);
+  line-height: 1;
+  text-transform: none;
+}
+
+[data-page='home'] .scene-role {
+  margin-top: var(--space-1);
+  font-size: var(--text-2);
+  line-height: 1;
+}
+
+[data-page='home'] .scene-links ul {
+  display: flex;
+  gap: var(--space-2);
+  list-style: none;
+  white-space: nowrap;
+  color: var(--c-fg);
+}
+
+/* Taller hit areas (32px) for fingers; the margins take the padding back so nothing moves. */
+[data-page='home'] .scene-links a {
+  display: inline-block;
+  padding-block: 5px;
+  margin-block: -5px;
+}
+
+[data-page='home'] .scene-fps {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+[data-page='home'] .scene-fps[hidden] {
+  display: none;
+}
+
+/* Below 900px the name, the scale and the links no longer fit on one row (the scene goes compact there too). */
+@media (max-width: 899px) {
+  /* The switch takes its own row above the name and the links. */
+  [data-page='home'] .scene-bottom {
+    grid-template-columns: 1fr auto;
+  }
+
+  [data-page='home'] .scene-switch {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  /* Links stack on the right so the name keeps its line; stacked, their hit areas must not overlap. */
+  [data-page='home'] .scene-links ul {
+    flex-direction: column;
+    gap: 0;
+    text-align: right;
+  }
+
+  [data-page='home'] .scene-links a {
+    padding-block: 4px;
+    margin-block: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  [data-page='home'] {
+    --scene-gutter: var(--space-1) var(--space-2);
+  }
+
+  [data-page='home'] .scene-page {
+    padding-block: var(--space-2);
+  }
+
+  /* The name would collide with the links at full size. */
+  [data-page='home'] .scene-name {
+    font-size: var(--text-4);
+  }
+
+  [data-page='home'] .scene-handle {
+    font-size: var(--text-2);
+  }
+}
+
+/*
+ * Time travel scale: 2001 [-+-+-+-] 2026 on a dark outlined badge. The slider picks any of the
+ * seven stages, the end years make the full trip; the ticks fill up to the stage on screen.
+ */
+[data-page='home'] .scene-era {
+  --thumb: 6px;
+  /* The years and the slider take touches 32px tall, more than the 22px line they sit on. */
+  --hit: 32px;
+
+  pointer-events: auto;
+  display: inline-flex;
+  gap: 0.6em;
+  align-items: center;
+  padding: 7px 14px;
+  border: 1px solid #6a6a6a;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 0.82);
+  backdrop-filter: blur(6px);
+  font-size: var(--text-2);
+  line-height: var(--line);
+  text-shadow: none;
+  color: var(--c-muted);
+}
+
+[data-page='home'] .scene-era[hidden],
+[data-page='home'] .scene-loading[hidden] {
+  display: none;
+}
+
+/* Stands in for the era switch while the 2026 shaders compile; same box, so nothing jumps. */
+[data-page='home'] .scene-loading {
+  padding: 8px 19px;
+  font-size: var(--text-2);
+  line-height: var(--line);
+}
+
+/* An ASCII bar in the accent colour: [#####.......]. */
+[data-page='home'] .scene-progress {
+  color: var(--c-accent);
+  white-space: pre;
+}
+
+[data-page='home'] .scene-era-end {
+  padding: calc((var(--hit) - var(--line)) / 2) 4px;
+  margin-block: calc((var(--line) - var(--hit)) / 2);
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+[data-page='home'] .scene-era-end:hover {
+  color: var(--c-fg);
+}
+
+[data-page='home'] .scene-era-end[data-here] {
+  color: var(--c-accent);
+}
+
+[data-page='home'] .scene-era-end:focus-visible,
+[data-page='home'] .scene-era-range:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 3px;
+}
+
+[data-page='home'] .scene-era-track {
+  position: relative;
+  display: block;
+  width: 132px;
+  height: var(--hit);
+  margin-block: calc((var(--line) - var(--hit)) / 2);
+}
+
+/* Tick centres line up with the thumb's centre at each step. */
+[data-page='home'] .scene-era-ticks {
+  position: absolute;
+  inset: 0 calc(var(--thumb) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+[data-page='home'] .scene-era-ticks > span {
+  width: 2px;
+  height: 6px;
+  margin-inline: -1px;
+  background: #4a4a4a;
+}
+
+[data-page='home'] .scene-era-ticks > span[data-on] {
+  background: var(--c-fg);
+}
+
+[data-page='home'] .scene-era-range {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+[data-page='home'] .scene-era-range::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+[data-page='home'] .scene-era-range::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+[data-page='home'] .scene-era-range::-webkit-slider-thumb {
+  width: var(--thumb);
+  height: 16px;
+  margin-top: calc((var(--hit) - 16px) / 2);
+  border: 0;
+  border-radius: 0;
+  background: var(--c-accent);
+  appearance: none;
+}
+
+[data-page='home'] .scene-era-range::-moz-range-thumb {
+  width: var(--thumb);
+  height: 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--c-accent);
+}
+
+/*
+ * 2001: the scale is a pixel-era control. Square corners, a hard 2px frame and a dithered drop
+ * shadow; the end years invert on hover like old Mac menus and press down on click.
+ */
+[data-page='home']:not([data-era='2026']) .scene-era {
+  position: relative;
+  isolation: isolate;
+  padding: 6px 12px;
+  border: 2px solid var(--c-fg);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  color: var(--c-fg);
+}
+
+/* Inside the badge's own stacking context the fill (::before) must sit above the shadow (::after). */
+[data-page='home']:not([data-era='2026']) .scene-era::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #000;
+}
+
+[data-page='home']:not([data-era='2026']) .scene-era::after {
+  content: '';
+  position: absolute;
+  inset: 2px -6px -6px 2px;
+  z-index: -2;
+  /* 1px checkerboard: the 50% grey of a 1-bit screen. */
+  background: repeating-conic-gradient(var(--c-fg) 0 25%, transparent 0 50%) 0 0 / 2px 2px;
+}
+
+[data-page='home']:not([data-era='2026']) .scene-era-end:hover {
+  background: var(--c-fg);
+  color: #000;
+}
+
+[data-page='home']:not([data-era='2026']) .scene-era-end:active {
+  transform: translate(1px, 1px);
+}
+
+/* 2001 ticks are square pixels; the rail between them is a dotted 1-bit line. */
+[data-page='home']:not([data-era='2026']) .scene-era-ticks {
+  background: repeating-linear-gradient(90deg, #4a4a4a 0 2px, transparent 2px 4px) center / 100% 2px no-repeat;
+}
+
+[data-page='home']:not([data-era='2026']) .scene-era-ticks > span {
+  width: 4px;
+  height: 4px;
+  margin-inline: -2px;
+}
+
+/* 2026: the overlay typeface changes with the picture. */
+[data-page='home'][data-era='2026'] {
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+[data-page='home'][data-era='2026'] .scene-page {
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px #000, 0 0 3px #000;
+}
+
+/* Stepped glitch on every era stage: jolts and colour fringes, no fades. */
+[data-page='home'][data-glitch] .scene-bottom {
+  animation: scene-glitch 0.3s steps(1, end) both;
+}
+
+@keyframes scene-glitch {
+  0% {
+    transform: translate(-4px, 0);
+    text-shadow: 3px 0 #ff2d6f, -3px 0 #2df3ff;
+  }
+  20% {
+    transform: translate(3px, 1px);
+    text-shadow: -2px 0 #ff2d6f, 2px 0 #2df3ff;
+  }
+  40% {
+    transform: translate(0, 0);
+    opacity: 0.55;
+  }
+  60% {
+    transform: translate(-2px, -1px);
+    text-shadow: 2px 0 #ff2d6f, -2px 0 #2df3ff;
+  }
+  80% {
+    transform: translate(1px, 0);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes scene-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Still frame: no entrance animations. */
+@media (prefers-reduced-motion: reduce) {
+  [data-page='home'] .scene-stage,
+  [data-page='home'] .scene-bottom,
+  [data-page='home'][data-glitch] .scene-bottom {
+    animation: none;
+  }
+}

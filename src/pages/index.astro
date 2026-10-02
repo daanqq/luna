@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+import Aurora from '../scene/Aurora';
+import { profile } from '../data/profile';
+import { LAST_STAGE } from '../scene/era';
+import '@fontsource/geist-mono/latin-400.css';
+import '../scene/scene.css';
+
+const stages = Array.from({ length: LAST_STAGE + 1 }, (_, n) => n);
+---
+
+<Base title={profile.name} description={profile.description} page="home">
+  <div class="scene-stage" aria-hidden="true">
+    <Aurora client:only="react" />
+  </div>
+
+  <div class="scene-page">
+    <footer class="scene-bottom">
+      <div class="scene-who">
+        <p class="scene-handle">@{profile.handle}</p>
+        <h1 class="scene-name">{profile.name.split(' ').map((word) => <span>{word}</span>)}</h1>
+        <p class="scene-role">{profile.role}</p>
+      </div>
+      <div class="scene-switch">
+        <p class="scene-loading" role="status" data-scene-loading hidden>
+          compiling 2026 <span class="scene-progress" aria-hidden="true" data-scene-progress></span>
+        </p>
+        <div class="scene-era" data-scene-era hidden>
+          <button class="scene-era-end" type="button" data-scene-stage="0" aria-label="Travel to 2001">2001</button>
+          <span class="scene-era-track">
+            <span class="scene-era-ticks" aria-hidden="true">{stages.map(() => <span />)}</span>
+            <input
+              class="scene-era-range"
+              type="range"
+              min="0"
+              max={stages.length - 1}
+              step="1"
+              value="0"
+              aria-label="Time travel between 2001 and 2026"
+              data-scene-era-range
+            />
+          </span>
+          <button class="scene-era-end" type="button" data-scene-stage={stages.length - 1} aria-label="Travel to 2026">2026</button>
+        </div>
+      </div>
+      <nav class="scene-links" aria-label="Links">
+        <ul>
+          {
+            profile.links.map((link) => (
+              <li>
+                <a href={link.href}>{link.label}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </footer>
+
+    <p class="scene-fps" data-scene-fps hidden>FPS --</p>
+  </div>
+</Base>

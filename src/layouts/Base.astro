@@ -1,0 +1,35 @@
+---
+import '../styles/base.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Page id; scopes token overrides via `[data-page="..."]`. */
+  page?: string;
+}
+
+const { title, description = 'Personal site', page } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link
+      rel="preload"
+      href="/fonts/DepartureMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>{title}</title>
+  </head>
+  <body data-page={page}>
+    <slot />
+  </body>
+</html>
