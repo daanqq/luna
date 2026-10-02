@@ -1071,7 +1071,9 @@ void main() {
 }`;
 
 // ------------------------------------------------------------------ composite (CRT stage + grain)
-export const COMPOSITE_UNIFORMS = ['uScene', 'uCanvas', 'uDpr', 'uPix', 'uTexSize', 'uFlick', 'uScan', 'uGrain', 'uVignette', 'uTime', 'uShift'] as const;
+export const COMPOSITE_UNIFORMS = [
+  'uScene', 'uCanvas', 'uDpr', 'uPix', 'uTexSize', 'uFlick', 'uScan', 'uGrain', 'uVignette', 'uTime', 'uShift', 'uHorizon', 'uCurve',
+] as const;
 
 export const COMPOSITE_FS = /* glsl */ `#version 300 es
 precision highp float;
@@ -1087,6 +1089,8 @@ uniform float uGrain;
 uniform float uVignette;
 uniform float uTime;
 uniform float uShift;
+uniform float uHorizon;
+uniform float uCurve;
 
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -1105,6 +1109,11 @@ void main() {
   float r = hash(vec2(band, tick));
   float jitter = (r > 0.78 ? (r - 0.78) * 90. : 0.) * uFlick * (hash(vec2(band, tick + 5.)) - 0.5) * 2.;
   vec2 at = vec2(css.x + jitter - uShift, css.y);
+  // Earth curvature, faked: columns sink toward the screen edges by up to uCurve CSS px, so the
+  // horizon becomes an arch. The top edge stays put and the shift grows down to the horizon, then
+  // holds over the sea; verticals stay vertical, unlike a lens distortion.
+  float u = css.x / (uCanvas.x / uDpr) * 2. - 1.;
+  at.y -= uCurve * u * u * min(css.y / uHorizon, 1.);
   vec3 col;
   if (uFlick > 0.01) {
     float split = 3.0 * uFlick;

@@ -41,6 +41,8 @@ export interface EraLook {
   glyph: number;
   /** Words appear only around the pointer, lit by the aurora. */
   reveal: boolean;
+  /** Share of the full horizon arch (Earth curvature, faked in the composite); grows with realism. */
+  curve: number;
 }
 
 export const LAST_STAGE = 6;
@@ -50,13 +52,13 @@ const TRAVEL_SECONDS = 2.8;
 const FLICKER_SECONDS = 0.3;
 
 const STAGES: readonly EraLook[] = [
-  { pixelShare: 1, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 1, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 1, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false },
-  { pixelShare: 0.8, mode: 2, mix: 1, levels: 24, dither: 0.8, alphaLevels: 14, modern: false, scan: 0.08, grain: 0, vignette: 0.1, flicker: 0.5, aurora: 0.5, glyph: 0.5, reveal: false },
-  { pixelShare: 0.5, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, modern: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true },
-  { pixelShare: 0.34, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, modern: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true },
-  { pixelShare: 0, mode: 3, mix: 1, levels: 0, dither: 0, alphaLevels: 0, modern: true, scan: 0, grain: 0.03, vignette: 0.4, flicker: 0.6, aurora: 1, glyph: 0, reveal: true },
+  { pixelShare: 1, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, curve: 0 },
+  { pixelShare: 1, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, curve: 0 },
+  { pixelShare: 1, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false, curve: 0 },
+  { pixelShare: 0.8, mode: 2, mix: 1, levels: 24, dither: 0.8, alphaLevels: 14, modern: false, scan: 0.08, grain: 0, vignette: 0.1, flicker: 0.5, aurora: 0.5, glyph: 0.5, reveal: false, curve: 0 },
+  { pixelShare: 0.5, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, modern: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true, curve: 0.4 },
+  { pixelShare: 0.34, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, modern: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true, curve: 0.7 },
+  { pixelShare: 0, mode: 3, mix: 1, levels: 0, dither: 0, alphaLevels: 0, modern: true, scan: 0, grain: 0.03, vignette: 0.4, flicker: 0.6, aurora: 1, glyph: 0, reveal: true, curve: 1 },
 ];
 
 export function lookAt(stage: number): EraLook {

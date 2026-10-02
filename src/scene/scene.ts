@@ -45,6 +45,7 @@ const FONT_MODERN = '"Space Mono", ui-monospace, monospace';
 const FONT_SIZE = 11;
 const LINE_HEIGHT = 13;
 const HORIZON = 0.66;
+const HORIZON_CURVE = 0.0025;
 const MOON_LOW_URL = '/moon/moon.png';
 const MOON_ALBEDO_URL = '/moon/moon-albedo.webp';
 const MOON_NORMAL_URL = '/moon/moon-normal.webp';
@@ -160,6 +161,8 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
   const scalePinned = params.has('scale');
   // `?gpuload=N` repeats every GPU pass N times: a stand-in for a graphics card N times slower.
   const gpuLoad = params.has('gpuload') ? clamp(Math.round(Number(params.get('gpuload')) || 1), 1, 8) : 1;
+  // How far the horizon drops at the screen edges in 2026, as a share of the screen width; `?curve=N` sets it in %.
+  const curveShare = params.has('curve') ? clamp(Number(params.get('curve')) || 0, 0, 5) / 100 : HORIZON_CURVE;
   const hdrMaps = gl.getExtension('EXT_color_buffer_float') !== null || gl.getExtension('EXT_color_buffer_half_float') !== null;
   // A shooting star every ~40 s on average; `?meteor=1` makes one come every few seconds for review.
   const meteorSlot = params.has('meteor') ? 5 : 15;
@@ -708,6 +711,8 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       g.uniform1f(c.uVignette, look.vignette);
       g.uniform1f(c.uTime, clock);
       g.uniform1f(c.uShift, glitchShift);
+      g.uniform1f(c.uHorizon, horizon);
+      g.uniform1f(c.uCurve, look.curve * curveShare * width);
       g.drawArrays(g.TRIANGLES, 0, 3);
       g.bindVertexArray(null);
 
