@@ -19,6 +19,7 @@ export const SCENE_UNIFORMS = [
   'uMoonTex', 'uColumns', 'uCurtain', 'uAlbedoMap', 'uNormalMap',
   'uAuroraTex', 'uSkyTex', 'uAuroraSpan', 'uSkySpan', 'uSkyTexel',
   'uAurora', 'uFft', 'uSeaTile', 'uSeaTexel', 'uSeaLam', 'uSeaHeight', 'uLost', 'uSeaA0', 'uSeaB0', 'uSeaA1', 'uSeaB1', 'uSeaA2', 'uSeaB2',
+  'uClouds', 'uMist', 'uLight',
 ] as const;
 
 const SCENE_FS = /* glsl */ `#version 300 es
@@ -63,6 +64,10 @@ uniform vec3 uSeaTile;
 uniform vec3 uSeaTexel;
 uniform vec3 uSeaLam;
 uniform float uSeaHeight;
+/** Art-direction amounts in [0, 1]: cloud cover, drifting mist banks, the distant ship light. */
+uniform float uClouds;
+uniform float uMist;
+uniform float uLight;
 uniform float uLost[32];
 uniform sampler2D uSeaA0;
 uniform sampler2D uSeaB0;
@@ -536,6 +541,32 @@ vec3 auroraLight(vec2 p) {
 
 /** The aurora light the last skyReal call added; the glyph level must not count it. */
 vec3 gSkyAurora = vec3(0.);
+/** Cloud density the last skyReal call used; the sky pass stores it in the sky map's alpha. */
+float gCloud = 0.;
+
+/** Thin streaks of cloud drifting across the middle of the sky; 0 clear, 1 thick. */
+float cloudField(vec2 p) {
+  if (uClouds < 0.001) return 0.;
+  vec2 q = p / uCss.x;
+  float h = clamp((uHorizon - p.y) / uHorizon, 0., 1.);
+  float drift = uTime * 0.004 * uMotion;
+  // Domain-warped noise stretched along x: ragged streaks rather than round puffs.
+  float warp = fbm(q * vec2(1.3, 5.) + vec2(1.7 - drift * 0.5, 0.));
+  float n = 0.7 * fbm(vec2(q.x * 2. - drift + warp * 1.2, q.y * 8.)) + 0.3 * fbm(vec2(q.x * 7. - drift * 1.6, q.y * 26.) + 3.1);
+  float band = smoothstep(0.06, 0.3, h) * (1. - smoothstep(0.6, 0.95, h));
+  float threshold = mix(0.6, 0.44, uClouds);
+  return smoothstep(threshold, threshold + 0.09, n) * band;
+}
+
+/** Clouds are soft, so only the coarse sky pass evaluates them; the scene reads the density back from the map. */
+float cloudAt(vec2 p) {
+#if PASS == 2
+  return cloudField(p);
+#else
+  if (uClouds < 0.001) return 0.;
+  return textureLod(uSkyTex, vec2(p.x / uSkySpan.x, 1. - p.y / uSkySpan.y), 0.).a;
+#endif
+}
 
 vec3 skyReal(vec2 p, float footprint, bool withStars) {
   float H = uCss.y;
@@ -573,6 +604,15 @@ vec3 skyReal(vec2 p, float footprint, bool withStars) {
   }
   // Emission only adds light, so the moon stays readable under it.
   gSkyAurora = auroraLight(p) * gAuroraNew * mix(1., 0.55, cover);
+  gCloud = p.y < uHorizon ? cloudAt(p) : 0.;
+  if (gCloud > 0.001) {
+    // Clouds hide what lies behind them, the aurora too; their undersides catch the moonlight near the disc.
+    float o = max(dist - R, 0.) / R;
+    vec3 lit = vec3(0.010, 0.013, 0.018) + vec3(0.55, 0.62, 0.72) * (0.16 * exp(-o / 0.25) + 0.04 * exp(-o / 1.2));
+    float through = 1. - 0.75 * gCloud;
+    col = col * through + lit * gCloud;
+    gSkyAurora *= through;
+  }
   return col + gSkyAurora;
 }
 
@@ -736,10 +776,17 @@ vec3 seaReal(vec2 p) {
   col += curtainReflection(p, d, tiltPx) * 0.5;
   col += vec3(0.55, 0.62, 0.72) * foam * 0.03 * (0.3 + 2. * pathW);
 
-  // Moonlit fog on the water where it meets the horizon.
+  // Moonlit fog on the water where it meets the horizon; with uMist it gathers into drifting banks.
   float fog = exp(-d * 9.);
-  col = mix(col, vec3(0.03, 0.045, 0.058) * (0.5 + 1.2 * exp(-pow((p.x - uMoon.x) / (uMoon.z * 1.0), 2.))), fog * 0.5);
+  float bank = 0.;
+  if (uMist > 0.001) {
+    bank = fbm(vec2(p.x / uCss.x * 5. - uTime * 0.012 * uMotion, d * 14. + uTime * 0.004 * uMotion));
+    fog *= mix(1., 0.45 + 1.3 * bank, uMist);
+  }
+  col = mix(col, vec3(0.03, 0.045, 0.058) * (0.5 + 1.2 * exp(-pow((p.x - uMoon.x) / (uMoon.z * 1.0), 2.))), min(fog * 0.5, 0.9));
   col += vec3(0.5, 0.62, 0.75) * 0.1 * exp(-d * 7.) * exp(-pow((p.x - uMoon.x) / (uMoon.z * 0.95), 2.));
+  col += vec3(0.30, 0.36, 0.44) * 0.08 * uMist * smoothstep(0.4, 0.7, bank) * exp(-d * 4.)
+    * (0.4 + 1.2 * exp(-pow((p.x - uMoon.x) / (uMoon.z * 1.3), 2.)));
   return col;
 }
 
@@ -884,12 +931,24 @@ void shade1997(vec2 pc, ivec2 cell, out vec3 col, out float level) {
   col += curtainReflection(pc, d, 0.) * 1.0;
 }
 
+/** A ship far out on the horizon beside the moon: a steady warm light that flashes every few seconds, with its streak on the water. */
+vec3 shipLight(vec2 p) {
+  if (uLight < 0.001) return vec3(0.);
+  vec2 d = p - vec2(uCss.x * (uCss.x < 900. ? 0.97 : 0.93), uHorizon - 1.2);
+  float t = uTime * uMotion;
+  float phase = fract(t / 4.3);
+  float level = 0.45 + 1.4 * exp(-pow((phase - 0.1) / 0.035, 2.));
+  float light = exp(-dot(d, d) / 2.2) + 0.08 * exp(-length(d) / 9.);
+  if (d.y > 0.) light += 0.3 * exp(-d.x * d.x / 3.) * exp(-d.y / 26.) * (0.5 + 0.5 * sin(d.y * 0.9 - t * 3.));
+  return vec3(1.0, 0.62, 0.32) * light * level * uLight * 2.;
+}
+
 /** Physically shaded scene in linear HDR: sky or sea, with haze straddling the horizon. */
 vec3 realHdr(vec2 pc, bool withStars) {
   vec3 hdr = pc.y < uHorizon ? skyReal(pc, uPix, withStars) : seaReal(pc);
   float hb = exp(-abs(pc.y - uHorizon) / (uCss.y * 0.034));
   vec3 hz = vec3(0.045, 0.065, 0.085) + vec3(0.30, 0.34, 0.40) * exp(-pow((pc.x - uMoon.x) / (uMoon.z * 1.05), 2.));
-  return mix(hdr, hz, hb * 0.75);
+  return mix(hdr, hz, hb * 0.75) + shipLight(pc);
 }
 
 /**
@@ -949,7 +1008,8 @@ void main() {
 #elif PASS == 2
   // The sky the sea reflects; the ramp stages keep the new aurora out of it, as in shadeRamp.
   gAuroraNew = uMode == 3 ? 1. : 0.;
-  outColor = vec4(skyReal(pc, uPix, false), 1.);
+  vec3 sky = skyReal(pc, uPix, false);
+  outColor = vec4(sky, gCloud);
 #elif PASS == 3
   ivec2 cell = ivec2(int(gl_FragCoord.x), int(uTexSize.y) - 1 - int(gl_FragCoord.y));
   vec3 col;
@@ -993,7 +1053,7 @@ export function sceneFs(pass: 0 | 1 | 2 | 3): string {
 // ------------------------------------------------------------------ curtain glyphs
 export const GLYPH_UNIFORMS = [
   'uView', 'uQuad', 'uPad', 'uSlots', 'uRows', 'uAtlas', 'uScene', 'uSceneMap', 'uCanvas', 'uDpr',
-  'uMode', 'uGlow', 'uShift', 'uLit',
+  'uMode', 'uGlow', 'uShift', 'uLit', 'uWipe',
 ] as const;
 
 export const GLYPH_VS = /* glsl */ `#version 300 es
@@ -1034,6 +1094,7 @@ uniform float uRows;
 uniform int uMode;
 uniform float uGlow;
 uniform float uLit;
+uniform float uWipe;
 
 const vec3 WHITE = vec3(0.875, 0.91, 0.90);
 const vec3 GREEN = vec3(0.706, 1.0, 0.224);
@@ -1053,6 +1114,8 @@ void main() {
   }
 
   vec2 css = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y) / uDpr;
+  // Below the era wipe the previous era's picture, curtain included, still shows.
+  if (uWipe >= 0. && css.y > uWipe) discard;
   float level = texture(uScene, vec2(css.x / uSceneMap.x, 1. - css.y / uSceneMap.y)).a;
   float dark = smoothstep(0.36, 0.56, level);
   float light = 1. - smoothstep(0.3, 0.5, level);
@@ -1073,6 +1136,7 @@ void main() {
 // ------------------------------------------------------------------ composite (CRT stage + grain)
 export const COMPOSITE_UNIFORMS = [
   'uScene', 'uCanvas', 'uDpr', 'uPix', 'uTexSize', 'uFlick', 'uScan', 'uGrain', 'uVignette', 'uTime', 'uShift', 'uHorizon', 'uCurve',
+  'uSway', 'uFringe', 'uPrev', 'uWipe',
 ] as const;
 
 export const COMPOSITE_FS = /* glsl */ `#version 300 es
@@ -1091,6 +1155,13 @@ uniform float uTime;
 uniform float uShift;
 uniform float uHorizon;
 uniform float uCurve;
+/** Camera on a boat: roll (rad), lift (CSS px) and the zoom that keeps the frame edges covered. */
+uniform vec3 uSway;
+/** Lens colour fringes at the frame corners, CSS px. */
+uniform float uFringe;
+/** The previous era's frame and the CSS y of the scan front revealing the new one; uWipe < 0 is off. */
+uniform sampler2D uPrev;
+uniform float uWipe;
 
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -1104,20 +1175,31 @@ vec3 fetch(vec2 css) {
 
 void main() {
   vec2 css = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y) / uDpr;
+  if (uWipe >= 0. && css.y > uWipe) {
+    outColor = texture(uPrev, gl_FragCoord.xy / uCanvas);
+    return;
+  }
   float tick = floor(uTime * 24.);
   float band = floor(css.y / 7.);
   float r = hash(vec2(band, tick));
   float jitter = (r > 0.78 ? (r - 0.78) * 90. : 0.) * uFlick * (hash(vec2(band, tick + 5.)) - 0.5) * 2.;
-  vec2 at = vec2(css.x + jitter - uShift, css.y);
+  vec2 view = uCanvas / uDpr;
+  vec2 mid = view * 0.5;
+  vec2 rel = (vec2(css.x + jitter - uShift, css.y) - mid) * uSway.z;
+  float cr = cos(uSway.x);
+  float sr = sin(uSway.x);
+  vec2 at = mid + vec2(cr * rel.x - sr * rel.y, sr * rel.x + cr * rel.y) + vec2(0., uSway.y);
   // Earth curvature, faked: columns sink toward the screen edges by up to uCurve CSS px, so the
   // horizon becomes an arch. The top edge stays put and the shift grows down to the horizon, then
   // holds over the sea; verticals stay vertical, unlike a lens distortion.
-  float u = css.x / (uCanvas.x / uDpr) * 2. - 1.;
-  at.y -= uCurve * u * u * min(css.y / uHorizon, 1.);
+  float u = at.x / view.x * 2. - 1.;
+  at.y -= uCurve * u * u * clamp(at.y / uHorizon, 0., 1.);
   vec3 col;
-  if (uFlick > 0.01) {
-    float split = 3.0 * uFlick;
-    col = vec3(fetch(at + vec2(split, 0.)).r, fetch(at).g, fetch(at - vec2(split, 0.)).b);
+  if (uFlick > 0.01 || uFringe > 0.01) {
+    // Glitch bursts split the channels sideways; the lens fringes grow toward the corners.
+    vec2 e = (at - mid) / length(mid);
+    vec2 split = vec2(3.0 * uFlick, 0.) + e * dot(e, e) * uFringe;
+    col = vec3(fetch(at + split).r, fetch(at).g, fetch(at - split).b);
   } else {
     col = fetch(at);
   }
@@ -1127,5 +1209,7 @@ void main() {
   vec2 q = css / (uCanvas / uDpr) - 0.5;
   col *= 1. - uVignette * dot(q, q) * 1.6;
   col += (hash(gl_FragCoord.xy + fract(uTime) * 91.) - 0.5) * uGrain;
+  // The scan front: a thin bright line just above the old picture.
+  if (uWipe >= 0.) col += vec3(0.5, 0.6, 0.5) * exp(-(uWipe - css.y) / 1.5);
   outColor = vec4(col, 1.);
 }`;

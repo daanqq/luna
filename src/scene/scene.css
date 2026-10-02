@@ -125,6 +125,53 @@
   display: none;
 }
 
+/* Art-direction panel, `?debug=1` only (tuning.ts). */
+[data-page='home'] .scene-debug {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 2;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(0 0 0 / 0.75);
+  font-size: var(--text-1);
+  line-height: var(--line);
+  text-transform: uppercase;
+  color: var(--c-fg);
+  touch-action: auto;
+}
+
+[data-page='home'] .scene-debug summary,
+[data-page='home'] .scene-debug button {
+  cursor: pointer;
+}
+
+[data-page='home'] .scene-debug label {
+  display: grid;
+  grid-template-columns: 7ch 140px 5ch;
+  gap: 8px;
+  align-items: center;
+}
+
+[data-page='home'] .scene-debug input {
+  accent-color: var(--c-accent);
+}
+
+[data-page='home'] .scene-debug output {
+  text-align: right;
+  color: var(--c-accent);
+}
+
+[data-page='home'] .scene-debug button {
+  margin-top: 4px;
+  padding: 0 6px;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  background: none;
+  font: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
 /* Below 900px the name and the scale no longer fit on one row (the scene goes compact there too): the switch goes under the links. */
 @media (max-width: 899px) {
   [data-page='home'] .scene-bottom {
