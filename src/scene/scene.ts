@@ -12,7 +12,6 @@ import {
   COMPOSITE_FS, COMPOSITE_UNIFORMS, FULLSCREEN_VS, GLYPH_FS, GLYPH_UNIFORMS, GLYPH_VS, SCENE_UNIFORMS, sceneFs,
 } from './shaders';
 import { AGC_FAMOUS_LINE, AGC_LINES, SITE_CODE_LINES } from './text';
-import { mountTuningPanel, TUNING_DEFAULTS, type Tuning } from './tuning';
 
 export interface EraState {
   stage: number;
@@ -46,11 +45,9 @@ const FONT_MODERN = '"Space Mono", ui-monospace, monospace';
 const FONT_SIZE = 11;
 const LINE_HEIGHT = 13;
 const HORIZON = 0.66;
-/** The moon climbs over this many seconds after the page opens, then stays. */
-const MOON_RISE_SECONDS = 240;
-/** Boat sway at tuning 1: peak roll in radians and peak lift in CSS px. */
-const SWAY_ROLL = 0.0035;
-const SWAY_LIFT = 2.5;
+const HORIZON_CURVE = 0.0015;
+/** Lens colour fringes at the 2026 frame corners, CSS px. */
+const LENS_FRINGE = 3;
 const MOON_LOW_URL = '/moon/moon.png';
 const MOON_ALBEDO_URL = '/moon/moon-albedo.webp';
 const MOON_NORMAL_URL = '/moon/moon-normal.webp';
@@ -166,9 +163,8 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
   const scalePinned = params.has('scale');
   // `?gpuload=N` repeats every GPU pass N times: a stand-in for a graphics card N times slower.
   const gpuLoad = params.has('gpuload') ? clamp(Math.round(Number(params.get('gpuload')) || 1), 1, 8) : 1;
-  const tuning: Tuning = { ...TUNING_DEFAULTS };
-  // `?curve=N` sets the horizon drop at the screen edges in 2026, in % of the screen width.
-  if (params.has('curve')) tuning.curve = clamp(Number(params.get('curve')) || 0, 0, 5);
+  // How far the horizon drops at the screen edges in 2026, as a share of the screen width; `?curve=N` sets it in %.
+  const curveShare = params.has('curve') ? clamp(Number(params.get('curve')) || 0, 0, 5) / 100 : HORIZON_CURVE;
   const hdrMaps = gl.getExtension('EXT_color_buffer_float') !== null || gl.getExtension('EXT_color_buffer_half_float') !== null;
   // A shooting star every ~40 s on average; `?meteor=1` makes one come every few seconds for review.
   const meteorSlot = params.has('meteor') ? 5 : 15;
@@ -252,11 +248,6 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
     timeline.target = Math.round(pinnedEra * LAST_STAGE);
     timeline.jump(pinnedEra * LAST_STAGE);
   }
-  const unmountTuning = params.has('debug')
-    ? mountTuningPanel(tuning, () => {
-      if (options.reducedMotion) drawStill();
-    })
-    : null;
   const listeners = new Set<(state: EraState) => void>();
   let lastEmitted = '';
   const emit = (force = false): void => {
@@ -284,10 +275,6 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
   let fftFrames = 0;
   let layout: Layout | null = null;
   let sceneTarget: Target | null = null;
-  /** The last frame of the previous era, which the scan front of the era wipe uncovers. */
-  let prevTarget: Target | null = null;
-  let renderedStage = -1;
-  let wipeStart = -1;
   let sceneNearest = false;
   let modernReady = false;
   let visible = true;
@@ -584,23 +571,12 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
     gl!.bindVertexArray(null);
   }
 
-  /**
-   * Draws one frame of `stage` into `output` (the canvas by default). `wipeY` is the CSS y of the era
-   * scan front: below it the previous era's frame from prevTarget still shows; negative is off.
-   */
-  function render(stage = real ? timeline.stage : 0, output: WebGLFramebuffer | null = null, wipeY = -1): void {
+  function render(): void {
     const l = layout;
     if (!l) return;
     const g = gl!;
-    const look = lookAt(stage);
+    const look = lookAt(real ? timeline.stage : 0);
     const { width, height, dpr, horizon } = l;
-    const motion = options.reducedMotion ? 0 : 1;
-    const moonY = l.moonY - (tuning.rise / 100) * height * smoothstep(0, MOON_RISE_SECONDS, clock * motion);
-    const sway = tuning.sway * look.camera * motion;
-    const roll = sway * SWAY_ROLL * (0.7 * Math.sin(clock * 0.31) + 0.3 * Math.sin(clock * 0.83 + 1.3));
-    const lift = sway * SWAY_LIFT * Math.sin(clock * 0.47 + 0.6);
-    // A fixed zoom, sized for the largest roll and lift, keeps the frame edges covered.
-    const zoom = 1 - (2 * (sway * SWAY_ROLL * width * 0.5 + sway * SWAY_LIFT)) / height;
     const canvasW = canvas.width;
     const canvasH = canvas.height;
     const native = 1 / (dpr * renderScale);
@@ -678,7 +654,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         g.uniform1i(s.uCurtain, 2);
         g.uniform2f(s.uCss, width, height);
         g.uniform1f(s.uHorizon, horizon);
-        g.uniform3f(s.uMoon, l.moonX, moonY, l.moonR);
+        g.uniform3f(s.uMoon, l.moonX, l.moonY, l.moonR);
         g.uniform1f(s.uTime, clock);
         g.uniform1i(s.uMode, look.mode);
         g.uniform1f(s.uMix, look.mix);
@@ -699,9 +675,6 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         g.uniform2f(s.uAuroraSpan, auroraMap.width * AURORA_TEXEL, auroraMap.height * AURORA_TEXEL);
         g.uniform2f(s.uSkySpan, skyMap.width * SKY_TEXEL, skyMap.height * SKY_TEXEL);
         g.uniform1f(s.uSkyTexel, SKY_TEXEL);
-        g.uniform1f(s.uClouds, tuning.clouds);
-        g.uniform1f(s.uMist, tuning.mist);
-        g.uniform1f(s.uLight, tuning.light);
         g.bindFramebuffer(g.FRAMEBUFFER, target.framebuffer);
         g.viewport(0, 0, target.width, target.height);
         g.uniform1f(s.uPix, pixel);
@@ -724,7 +697,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       }
 
       // 3. Composite into the canvas.
-      g.bindFramebuffer(g.FRAMEBUFFER, output);
+      g.bindFramebuffer(g.FRAMEBUFFER, null);
       g.viewport(0, 0, canvasW, canvasH);
       const c = compositeProgram.u;
       g.useProgram(compositeProgram.program);
@@ -741,13 +714,8 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       g.uniform1f(c.uTime, clock);
       g.uniform1f(c.uShift, glitchShift);
       g.uniform1f(c.uHorizon, horizon);
-      g.uniform1f(c.uCurve, look.camera * (tuning.curve / 100) * width);
-      g.uniform3f(c.uSway, roll, lift, zoom);
-      g.uniform1f(c.uFringe, look.camera * tuning.fringe);
-      // Unit 2 still holds the reflection map unless a wipe needs the previous frame.
-      if (wipeY >= 0 && prevTarget) bindTexture(g, 2, prevTarget.texture);
-      g.uniform1i(c.uPrev, 2);
-      g.uniform1f(c.uWipe, wipeY);
+      g.uniform1f(c.uCurve, look.camera * curveShare * width);
+      g.uniform1f(c.uFringe, look.camera * LENS_FRINGE);
       g.drawArrays(g.TRIANGLES, 0, 3);
       g.bindVertexArray(null);
 
@@ -762,35 +730,9 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
         g.uniform1f(u.uDpr, dpr);
         g.uniform1f(u.uShift, glitchShift);
         g.uniform1f(u.uLit, look.reveal ? 1 : 0);
-        g.uniform1f(u.uWipe, wipeY);
       });
       g.disable(g.BLEND);
     }
-  }
-
-  /**
-   * On an era change, keeps the last frame of the old era and starts a scan from top to bottom that
-   * reveals the new one, like a picture loading line by line. Returns the render arguments.
-   */
-  function nextWipe(l: Layout): [number, WebGLFramebuffer | null, number] {
-    const stage = real ? timeline.stage : 0;
-    const now = performance.now();
-    if (renderedStage >= 0 && stage !== renderedStage && tuning.wipe > 0) {
-      if (!prevTarget || prevTarget.width !== canvas.width || prevTarget.height !== canvas.height) {
-        deleteTarget(gl!, prevTarget);
-        prevTarget = createTarget(gl!, canvas.width, canvas.height, false);
-      }
-      render(renderedStage, prevTarget.framebuffer);
-      wipeStart = now;
-    }
-    renderedStage = stage;
-    if (wipeStart < 0) return [stage, null, -1];
-    const progress = (now - wipeStart) / tuning.wipe;
-    if (!(progress < 1)) {
-      wipeStart = -1;
-      return [stage, null, -1];
-    }
-    return [stage, null, l.height * smoothstep(0, 1, progress)];
   }
 
   function writeStatus(elapsedMs: number): void {
@@ -844,7 +786,7 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
     const burst = timeline.flicker * lookAt(timeline.stage).flicker;
     if (lookAt(timeline.stage).reveal) updateReveal(l, dt / 1000);
     glitchShift = burst > 0.02 ? (Math.random() - 0.5) * 16 * burst : 0;
-    render(...nextWipe(l));
+    render();
     adaptQuality(delta);
 
     statusFrames++;
@@ -1036,7 +978,6 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       document.documentElement.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('webglcontextlost', onContextLost);
       listeners.clear();
-      unmountTuning?.();
       gl.deleteProgram(retroProgram.program);
       if (real) for (const program of [real.scene, real.aurora, real.sky]) gl.deleteProgram(program.program);
       gl.deleteProgram(glyphProgram.program);
@@ -1050,7 +991,6 @@ export async function createScene(canvas: HTMLCanvasElement, options: SceneOptio
       gl.deleteVertexArray(glyphVao);
       gl.deleteVertexArray(emptyVao);
       deleteTarget(gl, sceneTarget);
-      deleteTarget(gl, prevTarget);
       if (layout) {
         deleteTarget(gl, layout.reflection);
         deleteTarget(gl, layout.auroraMap);

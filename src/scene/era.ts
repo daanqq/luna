@@ -41,7 +41,7 @@ export interface EraLook {
   glyph: number;
   /** Words appear only around the pointer, lit by the aurora. */
   reveal: boolean;
-  /** Share of the real-camera effects (horizon arch, boat sway, lens fringes); grows with realism. */
+  /** Share of the real-camera effects (horizon arch, lens fringes); grows with realism. */
   camera: number;
 }
 

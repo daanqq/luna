@@ -46,7 +46,6 @@ src/
 | `?scale=N`     | Pin the render scale (`0.5..1`)               |
 | `?gpuload=N`   | Repeat every GPU pass `N` times (`1..8`) to stand in for a slower GPU |
 | `?curve=N`     | Horizon drop at the screen edges in 2026, % of the width (`0..5`, default `0.15`) |
-| `?debug=1`     | Show the art-direction panel: clouds, mist, ship light, sway, lens fringes, curve, moon rise, era wipe |
 | `?time=N`      | Still frame moment with reduced motion        |
 | `?nofft=1`     | Use the sine sea instead of the FFT ocean     |
 | `?fftlog=1`    | Log FFT timings to the console                |
