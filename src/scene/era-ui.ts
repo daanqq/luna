@@ -122,10 +122,19 @@ function createOverlayFade(body: HTMLElement) {
 }
 
 /** Screen reader value of a stage: the end years, or the step between them. */
-function stageText(stage: number): string {
+function stageText(stage: number, year: string): string {
   if (stage === 0) return '2001';
-  if (stage === LAST_STAGE) return '2026';
-  return `step ${stage} of ${LAST_STAGE}, between 2001 and 2026`;
+  if (stage === LAST_STAGE) return year;
+  return `step ${stage} of ${LAST_STAGE}, between 2001 and ${year}`;
+}
+
+/** The scale ends in the year on the visitor's clock, not the year of the build. */
+function showCurrentYear(range: HTMLInputElement, last: HTMLElement | undefined): string {
+  const year = String(new Date().getFullYear());
+  for (const node of document.querySelectorAll<HTMLElement>('[data-scene-year]')) node.textContent = year;
+  last?.setAttribute('aria-label', `Travel to ${year}`);
+  range.setAttribute('aria-label', `Time travel between 2001 and ${year}`);
+  return year;
 }
 
 /**
@@ -145,6 +154,7 @@ export function bindEraUi(api: SceneApi): () => void {
   const bar = document.querySelector<HTMLElement>('[data-scene-progress]');
   const body = document.body;
   if (!control || !range) return () => undefined;
+  const year = showCurrentYear(range, ends.find((end) => Number(end.dataset.sceneStage) === LAST_STAGE));
   if (loader) loader.hidden = false;
   let intro = false;
   let unbound = false;
@@ -217,7 +227,7 @@ export function bindEraUi(api: SceneApi): () => void {
     if (state.settled) fade?.settle();
     shownStage = state.stage;
     range.value = String(state.target);
-    range.setAttribute('aria-valuetext', stageText(state.target));
+    range.setAttribute('aria-valuetext', stageText(state.target, year));
     // Ticks fill up to the stage on screen; the thumb already shows where the trip ends.
     ticks.forEach((tick, n) => tick.toggleAttribute('data-on', n <= state.stage));
     for (const end of ends) end.toggleAttribute('data-here', Number(end.dataset.sceneStage) === state.stage);

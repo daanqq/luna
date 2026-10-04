@@ -7,6 +7,8 @@ import '@fontsource/space-mono/latin-400.css';
 import '../scene/scene.css';
 
 const stages = Array.from({ length: LAST_STAGE + 1 }, (_, n) => n);
+// The scale ends in the visitor's year: `bindEraUi` swaps in their clock's year; this is the fallback.
+const year = new Date().getFullYear();
 ---
 
 <Base title={profile.name} description={profile.description} page="home">
@@ -41,7 +43,7 @@ const stages = Array.from({ length: LAST_STAGE + 1 }, (_, n) => n);
       </div>
       <div class="scene-switch">
         <p class="scene-loading" role="status" data-scene-loading hidden>
-          compiling 2026 <span class="scene-progress" aria-hidden="true" data-scene-progress></span>
+          compiling <span data-scene-year>{year}</span> <span class="scene-progress" aria-hidden="true" data-scene-progress></span>
         </p>
         <div class="scene-era" data-scene-era hidden>
           <button class="scene-era-end" type="button" data-scene-stage="0" aria-label="Travel to 2001">2001</button>
@@ -54,11 +56,11 @@ const stages = Array.from({ length: LAST_STAGE + 1 }, (_, n) => n);
               max={stages.length - 1}
               step="1"
               value="0"
-              aria-label="Time travel between 2001 and 2026"
+              aria-label={`Time travel between 2001 and ${year}`}
               data-scene-era-range
             />
           </span>
-          <button class="scene-era-end" type="button" data-scene-stage={stages.length - 1} aria-label="Travel to 2026">2026</button>
+          <button class="scene-era-end" type="button" data-scene-stage={stages.length - 1} aria-label={`Travel to ${year}`} data-scene-year>{year}</button>
         </div>
       </div>
     </footer>
