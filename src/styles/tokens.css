@@ -5,13 +5,13 @@
 :root {
   color-scheme: dark;
 
-  /* AMOLED palette: true black, a few grays, one acid accent. */
+  /* AMOLED palette: true black, a few grays, one blue-eyes accent. */
   --c-bg: #000;
   --c-fg: #e6e6e6;
   --c-muted: #8c8c8c;
   --c-faint: #4a4a4a;
   --c-line: #262626;
-  --c-accent: #b4ff39;
+  --c-accent: #a1caf1;
 
   --font-mono: 'Departure Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 

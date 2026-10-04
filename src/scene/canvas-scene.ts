@@ -22,7 +22,7 @@ const MOON_URL = '/moon/moon.png';
 /** The reflection compresses the sky by this factor when mapped onto the sea. */
 const REFLECTION_STRETCH = 1.5;
 const GLYPH_WHITE = '#dfe8e6';
-const GLYPH_GREEN = '#b4ff39';
+const GLYPH_ACCENT = '#a1caf1';
 /** Glyphs in front of the bright Moon are drawn as dark lace instead. */
 const GLYPH_DARK = '#03060a';
 const MAX_PIXEL = 6;
@@ -74,7 +74,7 @@ function buildAtlas(grid: readonly string[], font: string, cellWidth: number, dp
   if (!g) throw new Error('2D canvas context is unavailable');
   g.font = font.replace(/^\d+px/, `${FONT_SIZE * dpr}px`);
   g.textBaseline = 'alphabetic';
-  [GLYPH_WHITE, GLYPH_GREEN, GLYPH_DARK].forEach((color, row) => {
+  [GLYPH_WHITE, GLYPH_ACCENT, GLYPH_DARK].forEach((color, row) => {
     g.fillStyle = color;
     chars.forEach((char, n) => g.fillText(char, n * cw, row * ch + ch * 0.74));
   });

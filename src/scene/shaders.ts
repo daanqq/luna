@@ -1036,13 +1036,13 @@ uniform float uGlow;
 uniform float uLit;
 
 const vec3 WHITE = vec3(0.875, 0.91, 0.90);
-const vec3 GREEN = vec3(0.706, 1.0, 0.224);
+const vec3 ACCENT = vec3(0.631, 0.792, 0.945);
 const vec3 DARK = vec3(0.012, 0.024, 0.04);
 
 void main() {
   float crisp = texture(uAtlas, vec2(vUv.x, vUv.y / uRows)).a;
   float glow = uGlow > 0.5 ? texture(uAtlas, vec2(vUv.x, (1. + vUv.y) / uRows)).a : 0.;
-  vec3 tint = mix(WHITE, GREEN, vTint);
+  vec3 tint = mix(WHITE, ACCENT, vTint);
   float cov = crisp * vAlpha;
   float soft = glow * vAlpha * uGlow;
 
