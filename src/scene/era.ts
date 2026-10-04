@@ -1,11 +1,11 @@
 /**
  * Time travel: seven discrete "graphics eras", and every step changes one thing.
- *   0  1997: stylised scene, hand-made ramps (~8 levels), pixel 1, Bayer dither
+ *   0  1997: stylised scene, hand-made ramps (~8 levels), pixel 0.5, Bayer dither
  *   1  content 50%: realistic forms dissolve in (ordered mask), same ramps and pixels
  *   2  content 100%: realistic forms fully, still in the 1997 ramps
  *   3  shades: the same teal-grey tint with 24 levels, pixel ~0.8
- *   4  colour arrives: 4 levels per channel (~64 colours), dithered, pixel 0.5
- *   5  ~216 colours, light dither, pixel 0.34
+ *   4  colour arrives: 4 levels per channel (~64 colours), dithered, pixel 0.3
+ *   5  ~216 colours, light dither, pixel 0.2
  *   6  2026: continuous colour, native resolution
  * The text curtain belongs to 1997: from stage 3 it fades while a real aurora grows in its place
  * (stage 3 halves the words, stage 4 leaves only a trace); later the words show only near the pointer.
@@ -52,12 +52,12 @@ const TRAVEL_SECONDS = 2.8;
 const FLICKER_SECONDS = 0.3;
 
 const STAGES: readonly EraLook[] = [
-  { pixelShare: 1, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, camera: 0 },
-  { pixelShare: 1, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, camera: 0 },
-  { pixelShare: 1, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false, camera: 0 },
+  { pixelShare: 0.5, mode: 0, mix: 0, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, camera: 0 },
+  { pixelShare: 0.5, mode: 1, mix: 0.5, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.3, aurora: 0, glyph: 1, reveal: false, camera: 0 },
+  { pixelShare: 0.5, mode: 1, mix: 1, levels: 0, dither: 1, alphaLevels: 14, modern: false, scan: 0, grain: 0, vignette: 0, flicker: 0.4, aurora: 0, glyph: 1, reveal: false, camera: 0 },
   { pixelShare: 0.8, mode: 2, mix: 1, levels: 24, dither: 0.8, alphaLevels: 14, modern: false, scan: 0.08, grain: 0, vignette: 0.1, flicker: 0.5, aurora: 0.5, glyph: 0.5, reveal: false, camera: 0 },
-  { pixelShare: 0.5, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, modern: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true, camera: 0.4 },
-  { pixelShare: 0.34, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, modern: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true, camera: 0.7 },
+  { pixelShare: 0.3, mode: 3, mix: 1, levels: 4, dither: 1, alphaLevels: 0, modern: true, scan: 0.12, grain: 0.01, vignette: 0.25, flicker: 1, aurora: 1, glyph: 0.12, reveal: true, camera: 0.4 },
+  { pixelShare: 0.2, mode: 3, mix: 1, levels: 6, dither: 0.35, alphaLevels: 0, modern: true, scan: 0.06, grain: 0.02, vignette: 0.35, flicker: 0.8, aurora: 1, glyph: 0, reveal: true, camera: 0.7 },
   { pixelShare: 0, mode: 3, mix: 1, levels: 0, dither: 0, alphaLevels: 0, modern: true, scan: 0, grain: 0.03, vignette: 0.4, flicker: 0.6, aurora: 1, glyph: 0, reveal: true, camera: 1 },
 ];
 
