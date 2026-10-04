@@ -9,7 +9,7 @@ const INTRO_KEY = 'scene-intro-seen';
 const COMPILE_KEY = 'scene-compile-ms';
 const BAR_CELLS = 12;
 /** The first-visit trip starts no earlier than this after the page opened, so 2001 gets a moment on screen. */
-const INTRO_DELAY_MS = 10_000;
+const INTRO_DELAY_MS = 6_000;
 
 function introSeen(): boolean {
   try {
@@ -131,9 +131,9 @@ function stageText(stage: number): string {
 /**
  * Wires the `2001 [-------] 2026` scale to the scene: the slider picks any stage, the end years
  * make the full trip. While the 2026 shaders compile a loader stands in its place. On the first
- * visit the scene then travels to 2026 by itself, 10 s after opening at the earliest (or when the
- * compile is done, if later), and the scale appears once it has arrived; later
- * visits get it as soon as 2026 is ready. `body[data-era]` swaps the overlay typeface;
+ * visit the scene then travels to 2026 by itself, 6 s after the tab was first visible at the
+ * earliest (or when the compile is done, if later) and never while the tab is hidden; the scale
+ * appears once it has arrived. Later visits get it as soon as 2026 is ready. `body[data-era]` swaps the overlay typeface;
  * `data-glitch` restarts a stepped glitch each time the era stage changes.
  */
 export function bindEraUi(api: SceneApi): () => void {
@@ -149,6 +149,27 @@ export function bindEraUi(api: SceneApi): () => void {
   let intro = false;
   let unbound = false;
   let introTimer = 0;
+  /** The intro waits for the tab: a page opened in the background should still show 2001 first. */
+  let introPending = false;
+  let visibleSince = document.hidden ? null : 0;
+  const startIntro = (): void => {
+    if (!introPending || document.hidden) return;
+    const since = (visibleSince ??= performance.now());
+    clearTimeout(introTimer);
+    introTimer = window.setTimeout(() => {
+      // Hidden again before the delay ran out: the next visibilitychange starts the trip.
+      if (document.hidden) return;
+      introPending = false;
+      markIntroSeen();
+      intro = true;
+      api.setStage(LAST_STAGE);
+    }, Math.max(0, INTRO_DELAY_MS - (performance.now() - since)));
+  };
+  const onVisibility = (): void => {
+    if (!document.hidden) visibleSince ??= performance.now();
+    startIntro();
+  };
+  document.addEventListener('visibilitychange', onVisibility);
   // With reduced motion the stages are jumped over, so the overlay just stays.
   const fade = prefersReducedMotion() ? null : createOverlayFade(body);
   let shownStage: number | null = null;
@@ -183,12 +204,8 @@ export function bindEraUi(api: SceneApi): () => void {
     storeCompileMs(performance.now() - started);
     // `?era=` pins the scene for review, so it never plays the intro.
     if (!introSeen() && !new URLSearchParams(window.location.search).has('era')) {
-      // A fast compile would start the trip at once; the clock counts from the navigation start.
-      introTimer = window.setTimeout(() => {
-        markIntroSeen();
-        intro = true;
-        api.setStage(LAST_STAGE);
-      }, Math.max(0, INTRO_DELAY_MS - performance.now()));
+      introPending = true;
+      startIntro();
     } else {
       control.hidden = false;
     }
@@ -223,6 +240,7 @@ export function bindEraUi(api: SceneApi): () => void {
     unbound = true;
     cancelAnimationFrame(frame);
     clearTimeout(introTimer);
+    document.removeEventListener('visibilitychange', onVisibility);
     fade?.destroy();
     stop();
     range.removeEventListener('input', onInput);
