@@ -9,18 +9,18 @@ One full-screen scene: a giant Moon over an FFT sea under an aurora, with a time
 - [Astro 7](https://astro.build) renders static HTML.
 - React 19 only for the canvas island.
 - Raw WebGL2 for the scene, with a Canvas2D fallback.
-- [Bun](https://bun.sh) as the package manager and script runner.
+- npm as the package manager and script runner (Node.js 22.19 or newer).
 
 ## Commands
 
-| Command         | Action                                     |
-| :-------------- | :----------------------------------------- |
-| `bun install`   | Install dependencies                       |
-| `bun run dev`   | Start the dev server at `localhost:4321`   |
-| `bun run check` | Type-check (`astro check`)                 |
-| `bun run lint`  | Lint (`oxlint`)                            |
-| `bun run build` | Build the static site into `./dist/`       |
-| `bun run preview` | Preview the production build             |
+| Command           | Action                                   |
+| :---------------- | :--------------------------------------- |
+| `npm ci`          | Install dependencies from the lockfile   |
+| `npm run dev`     | Start the dev server at `localhost:4321` |
+| `npm run check`   | Type-check (`astro check`)               |
+| `npm run lint`    | Lint (`oxlint`)                          |
+| `npm run build`   | Build the static site into `./dist/`     |
+| `npm run preview` | Preview the production build             |
 
 ## Structure
 

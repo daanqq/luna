@@ -1,18 +1,18 @@
 ## Development
 
-When starting the dev server, use background mode (`astro` is not on PATH, run it through Bun):
+When starting the dev server, use background mode (`astro` is not on PATH, run it through npx):
 
 ```
-bunx astro dev --background
+npx astro dev --background
 ```
 
-Manage the background server with `bunx astro dev stop`, `bunx astro dev status`, and `bunx astro dev logs`.
+Manage the background server with `npx astro dev stop`, `npx astro dev status`, and `npx astro dev logs`.
 
 If the dev server serves stale modules (`504 Outdated Optimize Dep`, `_jsxDEV is not a function`), which happens after dependency changes or a `build` while it runs: stop it, delete `node_modules/.vite`, start it again.
 
 ## Validation
 
-- After any change: `bun run check`, `bun run lint`, `bun run build`.
+- After any change: `npm run check`, `npm run lint`, `npm run build`.
 - Headless browsers render WebGL in software (SwiftShader, under 1 fps): they catch shader compile errors and broken layout, but say nothing about GPU performance. Check that live with `?fps=1&gpuload=N&scale=1`.
 - The first visit travels to 2026 by itself; to test from the 2001 state, set `localStorage['scene-intro-seen'] = '1'` before the page loads.
 - `?era=` pins the scene and disables travel, so the time-travel scale cannot be tested with it.
@@ -33,7 +33,7 @@ Consult these guides before working on related tasks:
 
 ## Project
 
-Personal site. Astro 7 pages render static HTML; React 19 is used only for interactive islands (animations). Bun is the package manager and script runner (`bun run dev|check|lint|build`).
+Personal site. Astro 7 pages render static HTML; React 19 is used only for interactive islands (animations). npm is the package manager and script runner (`npm run dev|check|lint|build`); the hosting builds with Node, so keep `package-lock.json` the only lockfile.
 
 - `src/styles/tokens.css`: design tokens (AMOLED palette, Departure Mono, 11px type scale, 22px line rhythm). Override tokens inside a page root, not globally.
 - `src/layouts/Base.astro`: HTML shell; `page` prop sets `body[data-page]` for page-scoped token overrides.

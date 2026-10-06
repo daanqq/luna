@@ -1,3 +1,0 @@
-# Public npm for everyone: a registry from a global ~/.npmrc must not leak into bun.lock.
-[install]
-registry = "https://registry.npmjs.org/"

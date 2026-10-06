@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "version": "0.0.1",
-  "packageManager": "bun@1.4.2",
   "engines": {
     "node": ">=22.19.0"
   },
@@ -22,9 +21,6 @@
     "astro": "^7.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
-  },
-  "allowScripts": {
-    "esbuild": true
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
